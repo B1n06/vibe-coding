@@ -593,16 +593,18 @@ class TodoApp:
     # 居中小弹窗
     # =====================
     def _center_modal(self, modal, width=430, height=230):
+        """将弹窗放在屏幕正中心，而不是相对于主窗口"""
         self.root.update_idletasks()
         modal.update_idletasks()
 
-        root_x = self.root.winfo_rootx()
-        root_y = self.root.winfo_rooty()
-        root_w = max(1, self.root.winfo_width())
-        root_h = max(1, self.root.winfo_height())
+        # 获取屏幕尺寸
+        screen_width = modal.winfo_screenwidth()
+        screen_height = modal.winfo_screenheight()
 
-        x = root_x + (root_w - width) // 2
-        y = root_y + (root_h - height) // 2
+        # 计算弹窗在屏幕中心的位置
+        x = (screen_width - width) // 2
+        y = (screen_height - height) // 2
+
         modal.geometry(f"{width}x{height}+{max(0, x)}+{max(0, y)}")
 
     def show_dialog(self, title, message, kind="info"):
@@ -612,6 +614,7 @@ class TodoApp:
         modal.grab_set()
         modal.resizable(False, False)
         modal.configure(fg_color=THEME["window"])
+        modal.attributes("-topmost", True)  # 设置弹窗始终在最上层
 
         width = 430
         height = 210 if len(message) < 50 else 240
@@ -674,6 +677,7 @@ class TodoApp:
 
         modal.bind("<Escape>", lambda _event: modal.destroy())
         modal.bind("<Return>", lambda _event: modal.destroy())
+        modal.lift()  # 确保弹窗在最上方
         modal.focus_force()
         modal.wait_window()
 
@@ -686,6 +690,7 @@ class TodoApp:
         modal.grab_set()
         modal.resizable(False, False)
         modal.configure(fg_color=THEME["window"])
+        modal.attributes("-topmost", True)  # 设置弹窗始终在最上层
 
         width = 470
         height = 260
@@ -762,6 +767,7 @@ class TodoApp:
 
         modal.bind("<Escape>", lambda _event: choose(False))
         modal.bind("<Return>", lambda _event: choose(True))
+        modal.lift()  # 确保弹窗在最上方
         modal.focus_force()
         modal.wait_window()
         return result["value"]
@@ -1130,22 +1136,12 @@ class TodoApp:
                 self.accumulated_flow_time = total_flow
                 self.record_completed_flow()
 
-                try:
-                    self.root.attributes("-topmost", True)
-                except Exception:
-                    pass
-
                 result = self.ask_dialog(
                     "护眼提醒 & 心流周期完成",
                     f"你已经连续专注 {FLOW_AUTO_STOP_MINUTES} 分钟了！\n\n是否进行学习复盘？\n\n选择“是”进入复盘模式，最长 {MAX_REVIEW_MINUTES} 分钟；选择“否”直接进入休息。",
                     yes_text="开始复盘",
                     no_text="直接休息",
                 )
-
-                try:
-                    self.root.attributes("-topmost", False)
-                except Exception:
-                    pass
 
                 if result:
                     self.start_review()
@@ -1158,21 +1154,12 @@ class TodoApp:
 
             if review_time >= MAX_REVIEW_MINUTES * 60 and not self.review_auto_stopped_flag:
                 self.review_auto_stopped_flag = True
-                try:
-                    self.root.attributes("-topmost", True)
-                except Exception:
-                    pass
 
                 self.show_dialog(
                     "复盘时间到",
                     f"复盘时间已达 {MAX_REVIEW_MINUTES} 分钟，即将进入休息模式。",
                     kind="info",
                 )
-
-                try:
-                    self.root.attributes("-topmost", False)
-                except Exception:
-                    pass
                 self.finish_review()
 
         elif self.state == "PAUSE":
@@ -1187,13 +1174,11 @@ class TodoApp:
                 if not self.pause_reminded:
                     self.pause_reminded = True
                     bring_window_to_front(self.root)
-                    self.root.attributes("-topmost", True)
                     self.show_dialog(
                         "休息结束",
                         "休息时间已经结束！\n\n请立即停止娱乐活动，回到电脑前继续点击“恢复心流”完成你的任务。",
                         kind="warning",
                     )
-                    self.root.attributes("-topmost", False)
 
                     self.state = "IDLE"
                     self.status_label.configure(text="当前状态：待命", text_color=THEME["text"])

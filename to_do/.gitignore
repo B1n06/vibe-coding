@@ -1,0 +1,9 @@
+﻿.venv/
+build/
+dist/
+__pycache__/
+*.exe
+*.spec
+*.pyc
+*.pkg
+*.ico

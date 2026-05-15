@@ -5,6 +5,7 @@ import time
 from datetime import datetime
 import json
 import os
+import sys
 import ctypes
 
 try:
@@ -77,6 +78,52 @@ def enable_high_dpi_awareness():
             ctypes.windll.user32.SetProcessDPIAware()
         except Exception:
             pass
+
+
+def resource_path(relative_path):
+    """获取资源文件路径，兼容源码运行和 PyInstaller 打包后的环境。"""
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.dirname(os.path.abspath(__file__))
+
+    return os.path.join(base_path, relative_path)
+
+
+def set_windows_app_id():
+    """让 Windows 任务栏把程序识别为独立应用，从而正确显示自定义图标。"""
+    if os.name != "nt":
+        return
+
+    try:
+        app_id = "B1n.ToDo.FocusApp.1"
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
+    except Exception:
+        pass
+
+
+def apply_window_icon(window):
+    """设置主窗口/弹窗图标，防止 Tk 或 CustomTkinter 后续重置图标。"""
+    if os.name != "nt":
+        return
+
+    icon_path = resource_path("app.ico")
+    if not os.path.exists(icon_path):
+        return
+
+    def _set_icon():
+        try:
+            window.iconbitmap(default=icon_path)
+            window.iconbitmap(icon_path)
+        except Exception:
+            pass
+
+    _set_icon()
+    try:
+        window.after(200, _set_icon)
+        window.after(800, _set_icon)
+    except Exception:
+        pass
 
 
 def bring_window_to_front(root=None):
@@ -614,6 +661,7 @@ class TodoApp:
         modal.grab_set()
         modal.resizable(False, False)
         modal.configure(fg_color=THEME["window"])
+        apply_window_icon(modal)
         modal.attributes("-topmost", True)  # 设置弹窗始终在最上层
 
         width = 430
@@ -690,6 +738,7 @@ class TodoApp:
         modal.grab_set()
         modal.resizable(False, False)
         modal.configure(fg_color=THEME["window"])
+        apply_window_icon(modal)
         modal.attributes("-topmost", True)  # 设置弹窗始终在最上层
 
         width = 470
@@ -1195,6 +1244,8 @@ class TodoApp:
 
 if __name__ == "__main__":
     enable_high_dpi_awareness()
+    set_windows_app_id()
     root = ctk.CTk()
+    apply_window_icon(root)
     app = TodoApp(root)
     root.mainloop()
